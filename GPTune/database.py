@@ -81,7 +81,7 @@ def GetMachineConfiguration(meta_path=None, meta_dict=None):
                 num_nodes = int(os.getenv("SLURM_NNODES"))
 
                 import re
-                command = "lscpu | grep -E '^Thread|^Core|^Socket|^CPU\('"
+                command = r"lscpu | grep -E '^Thread|^Core|^Socket|^CPU\('"
                 p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
                 output, errors = p.communicate()
                 output_elems = re.split(': |\n', output)
@@ -360,7 +360,7 @@ class HistoryDB(dict):
 
                     import re
                     import subprocess
-                    command = "lscpu | grep -E '^Thread|^Core|^Socket|^CPU\('"
+                    command = r"lscpu | grep -E '^Thread|^Core|^Socket|^CPU\('"
                     p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
                     output, errors = p.communicate()
                     output_elems = re.split(': |\n', output)
@@ -614,7 +614,7 @@ class HistoryDB(dict):
 
             if (deps_passed == False):
                 if (self.verbose):
-                    print ("deps_passed failed: "  + " " + str(software_name)) 
+                    print ("deps_passed failed: "  + " " + str(software_name))
                 return False
 
         return True
@@ -1153,9 +1153,17 @@ class HistoryDB(dict):
                 elif (isinstance(p, Integer)):
                     task_dtype=task_dtype+', int32'
                 elif (isinstance(p, Categorical)):
-                    task_dtype=task_dtype+', U100'
+                    cat_type = type(problem.IS.inverse_transform(np.array(task_parameter, ndmin=2))[0][0])
+                    if cat_type is np.int64:
+                        task_dtype=task_dtype+', int32'
+                    elif cat_type is np.float64:
+                        task_dtype=task_dtype+', float64'
+                    elif cat_type is str:
+                        task_dtype=task_dtype+', U100'
+                    else:
+                        raise TypeError("CW: Invalid task dtype")
             task_dtype=task_dtype[2:]
-            
+
             tuning_dtype=''
             for p in problem.PS.dimensions:
                 if (isinstance(p, Real)):
